@@ -10,18 +10,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 
-    <!-- React & ReactDOM (CDN) -->
+    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <!-- Babel (CDN) - JSXをブラウザで実行するために必要 -->
+    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Tailwind CSS (CDN) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Lucide Icons (CDN) -->
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Leaflet.js (Map Library) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <!-- Tailwind設定 -->
     <script>
@@ -30,7 +34,7 @@
                 extend: {
                     colors: {
                         night: {
-                            900: '#0f172a', // Deep Navy
+                            900: '#0f172a',
                             800: '#1e293b',
                             card: 'rgba(30, 41, 59, 0.7)',
                         },
@@ -40,34 +44,20 @@
                             blue: '#3b82f6',
                             green: '#10b981',
                             yellow: '#fbbf24',
+                            hotpepper: '#eb4d3d', // HotPepper公式風の赤
                         }
                     },
                     fontFamily: {
                         sans: ['"Noto Sans JP"', 'sans-serif'],
                     },
                     animation: {
-                        'float': 'float 3s ease-in-out infinite',
                         'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                         'bounce-sm': 'bounceSmall 0.3s',
-                        'pop-in': 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                     },
                     keyframes: {
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-10px)' },
-                        },
-                        slideUp: {
-                            '0%': { transform: 'translateY(100%)' },
-                            '100%': { transform: 'translateY(0)' },
-                        },
                         bounceSmall: {
                             '0%, 100%': { transform: 'scale(1)' },
                             '50%': { transform: 'scale(0.8)' },
-                        },
-                        popIn: {
-                            '0%': { opacity: '0', transform: 'scale(0.8)' },
-                            '100%': { opacity: '1', transform: 'scale(1)' },
                         }
                     }
                 }
@@ -76,23 +66,14 @@
     </script>
 
     <style>
-        /* スクロールバー非表示（スマートに見せるため） */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* グラスモーフィズム（すりガラス効果） */
         .glass {
             background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .glass-card {
-            background: rgba(30, 41, 59, 0.4);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         body {
@@ -101,197 +82,201 @@
             -webkit-tap-highlight-color: transparent;
             display: flex;
             justify-content: center;
-            min-height: 100vh;
+            height: 100vh;
             margin: 0;
             font-family: 'Noto Sans JP', sans-serif;
+            overflow: hidden;
         }
 
-        /* スマホビューをPCでも再現するためのラッパー */
         #root {
             width: 100%;
             max-width: 430px;
             background-color: #0f172a;
             position: relative;
             box-shadow: 0 0 50px rgba(139, 92, 246, 0.2);
-            overflow-x: hidden;
-            min-height: 100vh;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* iPhoneの下部バーエリア確保 */
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 
-        /* 固定要素の中央揃え用 */
         .fixed-center {
-            position: fixed;
-            left: 50%;
-            transform: translateX(-50%);
+            position: absolute; /* PCビューの中央固定枠に対しての絶対配置 */
+            left: 0;
             width: 100%;
-            max-width: 430px;
         }
+
+        /* Leaflet Map Overrides */
+        .leaflet-container {
+            background: #0f172a !important;
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        .leaflet-control-attribution { display: none !important; }
+
+        /* カスタムネオンマーカー用CSS (Tailwind CDNだと動的クラスが効かない対策) */
+        .neon-marker-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+        }
+        .neon-pulse {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background-color: inherit;
+            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+            opacity: 0.5;
+        }
+        .neon-dot {
+            position: relative;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            z-index: 10;
+        }
+        /* 通常イベントはピンク */
+        .theme-normal { background-color: #ec4899; box-shadow: 0 0 15px rgba(236,72,153,0.8); }
+        /* ホットペッパーは赤 */
+        .theme-hotpepper { background-color: #eb4d3d; box-shadow: 0 0 15px rgba(235,77,61,0.8); }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         // --- Mock Data ---
-        
         const USERS = {
-            1: { id: 1, name: "Mika", age: "24", gender: "女性", job: "Webデザイナー", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mika&backgroundColor=ffdfbf", score: 4.9, badges: ["聞き上手", "マナー最高", "お洒落"] },
-            2: { id: 2, name: "Kenta", age: "28", gender: "男性", job: "エンジニア", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Kenta&backgroundColor=c0aede", score: 4.5, badges: ["盛り上げ隊長", "グルメ"] },
-            3: { id: 3, name: "Yui", age: "25", gender: "女性", job: "事務", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Yui&backgroundColor=b6e3f4", score: 5.0, badges: ["笑顔が素敵", "即レス"] },
-            4: { id: 4, name: "Hiro", age: "31", gender: "男性", job: "営業", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hiro&backgroundColor=ffdfbf", score: 4.2, badges: ["話題豊富"] },
-            5: { id: 5, name: "Aya", age: "26", gender: "女性", job: "保育士", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aya&backgroundColor=ffd5dc", score: 4.8, badges: ["癒し系", "安心感"] },
-            6: { id: 6, name: "Taka", age: "29", gender: "男性", job: "美容師", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Taka&backgroundColor=c0aede", score: 4.6, badges: ["お酒好き", "幹事経験者"] },
-            7: { id: 7, name: "Rina", age: "22", gender: "女性", job: "学生", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rina&backgroundColor=b6e3f4", score: 4.7, badges: ["ノリが良い"] },
-            8: { id: 8, name: "Daiki", age: "35", gender: "男性", job: "経営者", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Daiki&backgroundColor=ffdfbf", score: 5.0, badges: ["奢り上手", "紳士"] },
+            1: { id: 1, name: "Mika", age: "24", gender: "女性", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mika&backgroundColor=ffdfbf", score: 4.9 },
+            2: { id: 2, name: "Kenta", age: "28", gender: "男性", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Kenta&backgroundColor=c0aede", score: 4.5 },
+            3: { id: 3, name: "Yui", age: "25", gender: "女性", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Yui&backgroundColor=b6e3f4", score: 5.0 },
+            4: { id: 4, name: "Hiro", age: "31", gender: "男性", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hiro&backgroundColor=ffdfbf", score: 4.2 },
+            5: { id: 5, name: "Aya", age: "26", gender: "女性", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aya&backgroundColor=ffd5dc", score: 4.8 },
+            6: { id: 6, name: "Taka", age: "29", gender: "男性", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Taka&backgroundColor=c0aede", score: 4.6 },
+            7: { id: 7, name: "Rina", age: "22", gender: "女性", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rina&backgroundColor=b6e3f4", score: 4.7 },
+            8: { id: 8, name: "Daiki", age: "35", gender: "男性", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Daiki&backgroundColor=ffdfbf", score: 5.0 },
         };
 
         const STORIES = [
             { id: 1, tag: "#クリープハイプ", img: "https://images.unsplash.com/photo-1580442454643-47000e30472e?w=150&q=80", color: "from-yellow-400 to-yellow-600" },
             { id: 2, tag: "#ホークス", img: "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?w=150&q=80", color: "from-neon-pink to-neon-purple" },
-            { id: 3, tag: "#サウナ部", img: "https://images.unsplash.com/photo-1515362778563-6a8d0e44bc0b?w=150&q=80", color: "from-blue-400 to-cyan-400" },
-            { id: 4, tag: "#天神カフェ", img: "https://images.unsplash.com/photo-1550966871-3ed3c47e2ce2?w=150&q=80", color: "from-emerald-400 to-green-600" },
-            { id: 5, tag: "#2次会募集", img: "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?w=150&q=80", color: "from-orange-400 to-red-500" },
+            { id: 3, tag: "#天神飲み", img: "https://images.unsplash.com/photo-1550966871-3ed3c47e2ce2?w=150&q=80", color: "from-emerald-400 to-green-600" },
         ];
 
-        // Added Description, Conditions, Venue Details
+        // イベントデータ（緯度経度・isHotPepperフラグ付き）
         const EVENTS = [
             {
                 id: 1,
                 title: "【本日開催】クリープハイプ飲み（Zepp Fukuoka組）",
                 location: "天神 今泉エリア",
+                lat: 33.5861, lng: 130.3995, // 今泉付近
+                isHotPepper: true,
                 time: "本日 21:00~",
                 price: "¥3,500",
                 image: "https://images.unsplash.com/photo-1616654876707-c7cb87a55c65?w=800&q=80",
-                status: "あと1名で締切",
-                statusColor: "bg-red-500/90 text-white shadow-red-500/40",
+                status: "あと1名",
+                statusColor: "bg-red-500/90",
                 participantSummary: "現在 4/5名",
                 participantDetail: "女性2名(20代)、男性2名(20代)",
-                description: "今日のZepp Fukuokaライブ最高でしたね！この余韻のまま語り合いましょう！セトリ順にカラオケも行きたいかも🎤",
-                conditions: ["ライブ参戦者限定", "20代〜30代中心", "評価4.0以上の方"],
+                description: "今日のZepp Fukuokaライブ最高でしたね！この余韻のまま語り合いましょう！",
+                conditions: ["ライブ参戦者限定", "20代〜30代中心"],
                 venue: {
-                    name: "隠れ家個室 酔鯨亭（すいげいてい）",
+                    name: "隠れ家個室 酔鯨亭",
                     feature: "完全個室で周りを気にせず語れます。日本酒と鮮魚が自慢。",
                     menuImages: [
-                        "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=150&q=80", // Yakitori/Meat
-                        "https://images.unsplash.com/photo-1582236802188-727821590fdb?w=150&q=80", // Sashimi
-                        "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=150&q=80"  // Sake
-                    ],
-                    menuText: "・本日の刺身盛り合わせ\n・地鶏の炭火焼き\n・日本酒飲み比べセット"
+                        "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=150&q=80",
+                        "https://images.unsplash.com/photo-1582236802188-727821590fdb?w=150&q=80"
+                    ]
                 },
-                host: USERS[1],
-                participants: [USERS[1], USERS[2], USERS[3], USERS[4]]
+                host: USERS[1], participants: [USERS[1], USERS[2], USERS[3], USERS[4]]
             },
             {
                 id: 4,
                 title: "【女子限定】クリープハイプ飲み（天神・大名）",
-                location: "天神南エリア",
+                location: "天神 大名エリア",
+                lat: 33.5878, lng: 130.3954, // 大名付近
+                isHotPepper: false,
                 time: "本日 20:00~",
                 price: "¥3,000",
-                image: "https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=800&q=80", // Stylish Cafe/Bar
+                image: "https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=800&q=80",
                 status: "あと2名",
-                statusColor: "bg-pink-500/90 text-white shadow-pink-500/40",
+                statusColor: "bg-pink-500/90",
                 participantSummary: "現在 3/5名",
                 participantDetail: "女性3名(20代)",
-                description: "歌詞の深読みとか、尾崎世界観について語り合いましょう！女子だけで気兼ねなく！スイーツも美味しいお店です🍰",
-                conditions: ["女性限定", "歌詞深読み勢", "20代中心"],
+                description: "女子だけで気兼ねなく！スイーツも美味しいお店です🍰",
+                conditions: ["女性限定", "20代中心"],
                 venue: {
                     name: "Cafe & Bar Honey",
                     feature: "ソファ席でゆったり。オリジナルカクテルと夜パフェが人気。",
                     menuImages: [
                         "https://images.unsplash.com/photo-1563223163-548c772dc8c2?w=150&q=80",
-                        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=150&q=80",
-                        "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=150&q=80"
-                    ],
-                    menuText: "・季節のフルーツパフェ\n・アボカドとエビのディップ\n・映えるオリジナルカクテル"
+                        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=150&q=80"
+                    ]
                 },
-                host: USERS[3], // Yui
-                participants: [USERS[3], USERS[1], USERS[5]] // Yui, Mika, Aya
+                host: USERS[3], participants: [USERS[3], USERS[1], USERS[5]]
             },
             {
                 id: 5,
                 title: "【男限定】クリープハイプ飲み（中洲川端）",
                 location: "中洲エリア",
+                lat: 33.5930, lng: 130.4045, // 中洲付近
+                isHotPepper: true,
                 time: "本日 21:00~",
                 price: "¥4,000",
-                image: "https://images.unsplash.com/photo-1515539075675-d523097c2f62?w=800&q=80", // Izakaya/Beer/Night
+                image: "https://images.unsplash.com/photo-1515539075675-d523097c2f62?w=800&q=80",
                 status: "募集中",
-                statusColor: "bg-indigo-500/90 text-white shadow-indigo-500/40",
+                statusColor: "bg-indigo-500/90",
                 participantSummary: "現在 2/6名",
                 participantDetail: "男性2名(20代・30代)",
-                description: "男だってクリープハイプが好きだ！ライブの感想戦、男だけで熱く語ろう。最後はラーメンで〆！",
-                conditions: ["男性限定", "全肯定オタク", "ハイボール好き"],
+                description: "男だってクリープハイプが好きだ！男だけで熱く語ろう。",
+                conditions: ["男性限定", "全肯定オタク"],
                 venue: {
                     name: "博多 焼き鳥 権兵衛",
                     feature: "THE・博多の居酒屋。ガヤガヤした雰囲気で気取らず飲めます。",
                     menuImages: [
                         "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=150&q=80",
-                        "https://images.unsplash.com/photo-1596797038530-2c107229654b?w=150&q=80",
-                        "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=150&q=80"
-                    ],
-                    menuText: "・豚バラ串\n・ゴマサバ\n・メガ角ハイボール"
+                        "https://images.unsplash.com/photo-1596797038530-2c107229654b?w=150&q=80"
+                    ]
                 },
-                host: USERS[2], // Kenta
-                participants: [USERS[2], USERS[4]] // Kenta, Hiro
+                host: USERS[2], participants: [USERS[2], USERS[4]]
             },
             {
                 id: 2,
-                title: "【本日開催】ホークス勝機！祝勝会（PayPayドーム組）",
+                title: "【本日開催】ホークス勝機！祝勝会",
                 location: "PayPayドーム周辺",
+                lat: 33.5954, lng: 130.3621, // ドーム付近
+                isHotPepper: true,
                 time: "本日 21:30~",
                 price: "¥2,000",
                 image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80",
                 status: "募集中",
-                statusColor: "bg-green-500/90 text-white shadow-green-500/40",
+                statusColor: "bg-green-500/90",
                 participantSummary: "現在 2/10名",
                 participantDetail: "女性0名、男性2名(30代)",
-                description: "勝ったばーい！！この勢いで祝杯をあげましょう🍻 野球の話で盛り上がりたいです！ユニフォームそのままでOK！",
-                conditions: ["ホークスファン", "誰でも歓迎", "ユニフォーム着用歓迎"],
+                description: "勝ったばーい！！この勢いで祝杯をあげましょう🍻",
+                conditions: ["ホークスファン", "誰でも歓迎"],
                 venue: {
                     name: "大衆酒場 鷹の爪",
                     feature: "大型モニターあり。試合のハイライトを見ながら飲めます！",
                     menuImages: [
-                        "https://images.unsplash.com/photo-1555126634-323283e090fa?w=150&q=80", // Gyoza/Pub food
-                        "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=150&q=80", // Beer
-                        "https://images.unsplash.com/photo-1623341214825-9f4f963727da?w=150&q=80"  // Ramen
-                    ],
-                    menuText: "・名物！鉄鍋餃子\n・博多一口ラーメン\n・メガハイボール"
+                        "https://images.unsplash.com/photo-1555126634-323283e090fa?w=150&q=80",
+                        "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=150&q=80"
+                    ]
                 },
-                host: USERS[6],
-                participants: [USERS[6], USERS[8]]
-            },
-            {
-                id: 3,
-                title: "【明日開催】マカロニえんぴつ飲み",
-                location: "大名エリア",
-                time: "明日 19:00~",
-                price: "¥4,000",
-                image: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=800&q=80",
-                status: "募集中",
-                statusColor: "bg-blue-500/90 text-white shadow-blue-500/40",
-                participantSummary: "現在 3/8名",
-                participantDetail: "女性2名(20代)、男性1名(20代)",
-                description: "明日のライブに向けて前夜祭！グッズ見せ合いっこしたり、推し曲について語りましょう。",
-                conditions: ["マカえん好き", "評価4.5以上（マナー重視）", "年齢不問"],
-                venue: {
-                    name: "Dining Bar BLUE",
-                    feature: "落ち着いた照明のお洒落なバー。音楽好きが集まるお店です。",
-                    menuImages: [
-                        "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=150&q=80", // Cocktails
-                        "https://images.unsplash.com/photo-1608835291093-394b0c943a75?w=150&q=80", // Pasta
-                        "https://images.unsplash.com/photo-1563223163-548c772dc8c2?w=150&q=80"  // Appetizer
-                    ],
-                    menuText: "・季節のフルーツカクテル\n・生ハムとチーズの盛り合わせ\n・濃厚カルボナーラ"
-                },
-                host: USERS[5],
-                participants: [USERS[5], USERS[7], USERS[2]]
+                host: USERS[6], participants: [USERS[6], USERS[8]]
             }
         ];
 
-        // --- Icons (Lucide) Helper ---
         const Icon = ({ name, size = 20, className = "" }) => {
             useEffect(() => {
                 lucide.createIcons();
@@ -299,297 +284,190 @@
             return <i data-lucide={name} width={size} height={size} className={className}></i>;
         };
 
-        // --- Components ---
-
-        // 1. Splash Screen
-        const SplashScreen = ({ onFinish }) => {
-            const [visible, setVisible] = useState(true);
+        // --- Map Component (Leaflet) ---
+        const MapView = ({ events, onMarkerClick }) => {
             useEffect(() => {
-                const timer = setTimeout(() => {
-                    setVisible(false);
-                    setTimeout(onFinish, 500); 
-                }, 2000);
-                return () => clearTimeout(timer);
-            }, []);
-            if (!visible) return null;
-            return (
-                <div className={`fixed-center top-0 h-screen z-[100] flex flex-col items-center justify-center bg-night-900 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-neon-pink blur-2xl opacity-20 animate-pulse"></div>
-                        <h1 className="relative text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-neon-pink to-neon-purple animate-float">
-                            TOMO<br/>NOMI
-                        </h1>
-                    </div>
-                    <p className="mt-4 text-xs font-bold tracking-widest text-slate-500">FUKUOKA NEO NIGHT</p>
-                </div>
-            );
+                // 地図の初期化
+                const map = L.map('leaflet-map', {
+                    zoomControl: false,
+                    attributionControl: false
+                }).setView([33.5902, 130.3959], 14); // 天神中心
+
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+                events.forEach(event => {
+                    if (event.lat && event.lng) {
+                        const isHot = event.isHotPepper;
+                        const themeClass = isHot ? 'theme-hotpepper' : 'theme-normal';
+                        
+                        // カスタムマーカーHTML
+                        const iconHtml = `
+                            <div class="neon-marker-container">
+                                <div class="neon-pulse ${themeClass}"></div>
+                                <div class="neon-dot ${themeClass}">🍻</div>
+                            </div>
+                        `;
+
+                        const icon = L.divIcon({
+                            html: iconHtml,
+                            className: '', // Leafletデフォルトの背景を消す
+                            iconSize: [44, 44],
+                            iconAnchor: [22, 22]
+                        });
+
+                        const marker = L.marker([event.lat, event.lng], { icon }).addTo(map);
+                        marker.on('click', () => onMarkerClick(event));
+                    }
+                });
+
+                // コンテナのサイズが変わった際に地図がグレーアウトするのを防ぐ
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 100);
+
+                return () => {
+                    map.remove();
+                };
+            }, [events]);
+
+            return <div id="leaflet-map" className="absolute inset-0 w-full h-full z-0"></div>;
         };
 
-        // 2. User Profile Modal
-        const UserProfileModal = ({ user, onClose }) => {
-            if (!user) return null;
-
-            return (
-                <div className="fixed-center top-0 h-full z-[70] flex items-center justify-center p-6 animate-pop-in">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
-                    <div className="relative w-full max-w-sm bg-night-800 rounded-3xl overflow-hidden border border-white/10 shadow-2xl shadow-neon-purple/20">
-                        <div className="h-24 bg-gradient-to-r from-neon-pink to-neon-purple opacity-80"></div>
-                        <div className="absolute top-10 left-1/2 transform -translate-x-1/2">
-                            <div className="w-24 h-24 rounded-full p-1 bg-night-900">
-                                <img src={user.image} className="w-full h-full rounded-full object-cover border-4 border-night-900 bg-white" />
-                            </div>
-                            <div className="absolute bottom-0 right-0 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-night-900 flex items-center">
-                                <Icon name="shield-check" size={10} className="mr-1" />
-                                認証済
-                            </div>
-                        </div>
-                        <div className="pt-14 pb-8 px-6 text-center">
-                            <h3 className="text-xl font-bold text-white mb-1 flex items-center justify-center">
-                                {user.name} 
-                                <span className="ml-2 text-sm font-normal text-slate-400">({user.age})</span>
-                            </h3>
-                            <p className="text-xs text-slate-400 mb-4">{user.job}</p>
-                            <div className="flex items-center justify-center space-x-4 mb-6">
-                                <div className="flex flex-col items-center">
-                                    <div className="flex items-center text-yellow-400 mb-1">
-                                        <Icon name="star" size={18} fill="currentColor" />
-                                        <span className="ml-1 text-2xl font-black">{user.score}</span>
-                                    </div>
-                                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">信頼スコア</span>
-                                </div>
-                                <div className="w-px h-8 bg-white/10"></div>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-xl font-bold text-neon-green">Very Good</span>
-                                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">マナー評価</span>
-                                </div>
-                            </div>
-                            <div className="bg-slate-800/50 rounded-2xl p-4 mb-6">
-                                <p className="text-xs text-slate-400 mb-3 text-left flex items-center">
-                                    <Icon name="message-circle-heart" size={14} className="mr-2 text-neon-pink" />
-                                    参加者からのレビュー（バッジ）
-                                </p>
-                                <div className="flex flex-wrap justify-center gap-2">
-                                    {user.badges.map((badge, i) => (
-                                        <span key={i} className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/5 border border-white/10 text-slate-200">
-                                            #{badge}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                            <button onClick={onClose} className="w-full py-3 rounded-xl bg-slate-700 text-white font-bold text-sm active:scale-95 transition-transform">
-                                閉じる
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // 3. Event Card
-        const EventCard = ({ event, onClick }) => (
-            <div 
-                onClick={() => onClick(event)}
-                className="mb-6 relative w-full aspect-[4/5] sm:aspect-[16/9] rounded-3xl overflow-hidden active:scale-[0.98] transition-all duration-200 shadow-2xl shadow-neon-purple/10 cursor-pointer group"
-            >
-                <img src={event.image} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-night-900 via-night-900/40 to-transparent"></div>
-                <div className="absolute top-4 left-4">
-                     <span className={`px-3 py-1 text-xs font-bold rounded-full backdrop-blur-md shadow-lg ${event.statusColor}`}>
-                        {event.status}
-                    </span>
-                </div>
-                <div className="absolute bottom-0 left-0 w-full p-5 pb-6">
-                    <div className="flex items-center text-neon-pink text-xs font-bold mb-1 tracking-wider uppercase">
-                        <Icon name="map-pin" size={12} className="mr-1" />
-                        {event.location}
-                    </div>
-                    <h3 className="text-xl font-bold leading-tight mb-3 text-white">
-                        {event.title}
-                    </h3>
-                    <div className="glass-card rounded-xl p-3 mb-2 flex items-center justify-between border-l-4 border-neon-purple">
-                         <div className="flex flex-col">
-                             <span className="text-xs text-slate-300 font-medium mb-0.5">{event.participantSummary}</span>
-                             <span className="text-[10px] text-slate-400 line-clamp-1">{event.participantDetail}</span>
-                         </div>
-                         <div className="flex -space-x-2">
-                            {event.participants.slice(0, 3).map((p, i) => (
-                                <img key={i} src={p.image} className="w-7 h-7 rounded-full border border-night-900 object-cover bg-white" />
-                            ))}
-                        </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-3">
-                        <span className="text-xs text-slate-400">{event.time}</span>
-                        <div className="flex items-center space-x-2 bg-neon-purple/80 px-3 py-1.5 rounded-full backdrop-blur-sm shadow-lg shadow-neon-purple/20">
-                            <span className="text-sm font-bold text-white">{event.price}</span>
-                            <Icon name="chevron-right" size={14} className="text-white" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-
-        // 4. Detail Bottom Sheet (Updated with Description, Conditions, Venue)
-        const BottomSheet = ({ event, onClose, onUserClick }) => {
+        // --- Bottom Sheet Component ---
+        const BottomSheet = ({ event, onClose }) => {
             const [show, setShow] = useState(false);
 
             useEffect(() => {
                 if (event) {
                     setShow(true);
-                    document.body.style.overflow = 'hidden';
                 } else {
                     setShow(false);
-                    document.body.style.overflow = '';
                 }
             }, [event]);
 
             if (!event) return null;
 
             return (
-                <div className="fixed-center top-0 h-full z-50 pointer-events-none">
+                <div className="fixed-center top-0 h-full z-[100] pointer-events-none">
+                    {/* Backdrop */}
                     <div 
                         className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto ${show ? 'opacity-100' : 'opacity-0'}`}
                         onClick={onClose}
                     ></div>
 
+                    {/* Sheet Content */}
                     <div className={`absolute bottom-0 left-0 right-0 bg-night-800 rounded-t-[2.5rem] overflow-hidden transition-transform duration-500 ease-out transform pointer-events-auto ${show ? 'translate-y-0' : 'translate-y-full'} h-[92%] shadow-2xl border-t border-white/10 flex flex-col`}>
                         
                         <div className="absolute top-0 left-0 w-full h-12 flex items-center justify-center z-20 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
                             <div className="w-12 h-1.5 bg-white/30 rounded-full"></div>
                         </div>
 
-                        <div className="relative h-60 w-full flex-shrink-0">
+                        {/* Image Header */}
+                        <div className="relative h-56 w-full flex-shrink-0">
                             <img src={event.image} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-night-800"></div>
+
                             <button onClick={onClose} className="absolute top-4 right-4 w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 z-30 cursor-pointer active:scale-95 transition-transform">
                                 <Icon name="x" size={20} />
                             </button>
                         </div>
 
+                        {/* Scrollable Content */}
                         <div className="flex-1 overflow-y-auto -mt-6 relative z-10 px-6 pb-32">
                              <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center space-x-2">
                                     <span className="text-neon-pink font-bold text-[10px] tracking-widest uppercase bg-neon-pink/10 px-2 py-1 rounded border border-neon-pink/20">Host</span>
                                     <span className="text-xs font-bold text-white">{event.host.name}</span>
                                 </div>
-                                <div className="flex items-center space-x-1 text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-full border border-yellow-400/20">
-                                    <Icon name="star" size={12} fill="currentColor" />
-                                    <span className="text-xs font-bold">{event.host.score}</span>
-                                </div>
                             </div>
                             
                             <h2 className="text-2xl font-black mb-3 leading-tight text-white">{event.title}</h2>
                             
-                             <div className="flex flex-wrap gap-2 mb-6">
-                                <span className={`px-3 py-1 text-xs font-bold rounded-full ${event.statusColor}`}>
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                <span className={`px-3 py-1 text-xs font-bold rounded-full text-white shadow-lg ${event.statusColor}`}>
                                     {event.status}
-                                </span>
-                                <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-700 text-slate-200 border border-slate-600">
-                                    {event.price}
                                 </span>
                             </div>
 
-                            {/* New: Description */}
                             <div className="mb-6">
                                 <p className="text-sm text-slate-200 leading-relaxed font-medium">
                                     {event.description}
                                 </p>
                             </div>
 
-                            {/* New: Conditions */}
-                            <div className="mb-6">
-                                <h3 className="text-sm font-bold text-slate-300 mb-3 flex items-center">
-                                    <Icon name="alert-circle" size={16} className="mr-2 text-neon-yellow" />
-                                    参加条件・推奨
-                                </h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {event.conditions.map((cond, i) => (
-                                        <div key={i} className="flex items-center px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-100 text-xs font-bold">
-                                            <Icon name="check" size={10} className="mr-1.5" />
-                                            {cond}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Existing: Basic Info */}
-                            <div className="space-y-4 mb-8 bg-slate-800/50 p-5 rounded-3xl border border-white/5">
-                                <div className="flex items-start text-slate-300">
-                                    <div className="w-8 h-8 rounded-full bg-slate-800 flex-shrink-0 flex items-center justify-center mr-3 text-neon-green border border-white/10 shadow-inner">
-                                        <Icon name="users-round" size={16} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-slate-400 mb-0.5">現在の予約者内訳 <span className="text-neon-green ml-1 font-bold">安心可視化</span></p>
-                                        <p className="font-bold text-sm text-white leading-relaxed">
-                                            {event.participantDetail}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* New: Venue Details */}
+                            {/* Venue Details & HotPepper Badges */}
                             <div className="mb-8">
                                 <h3 className="text-sm font-bold text-slate-300 mb-3 flex items-center">
                                     <Icon name="store" size={16} className="mr-2 text-neon-blue" />
-                                    お店の雰囲気・メニュー
+                                    お店の情報
                                 </h3>
-                                <div className="bg-night-900/50 rounded-2xl p-4 border border-white/5">
-                                    <p className="font-bold text-white mb-1">{event.venue.name}</p>
+                                <div className={`bg-night-900/50 rounded-2xl p-4 border ${event.isHotPepper ? 'border-neon-hotpepper/50 bg-neon-hotpepper/5' : 'border-white/5'}`}>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <p className="font-bold text-white mb-1">{event.venue.name}</p>
+                                            <p className="text-[10px] text-slate-400">{event.location}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* ★リクエスト箇所：ホットペッパーのバッジ */}
+                                    {event.isHotPepper && (
+                                        <div className="flex flex-wrap gap-2 mb-3">
+                                            <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-md flex items-center shadow-md border border-red-500">
+                                                🔥 即予約OK
+                                            </span>
+                                            <span className="bg-yellow-400 text-black text-[10px] font-black px-2 py-1 rounded-md flex items-center shadow-md border border-yellow-500">
+                                                🅿️ ポイント貯まる
+                                            </span>
+                                        </div>
+                                    )}
+
                                     <p className="text-xs text-slate-400 mb-4">{event.venue.feature}</p>
                                     
-                                    {/* Horizontal Scroll Images */}
-                                    <div className="flex overflow-x-auto no-scrollbar space-x-3 mb-4 -mx-2 px-2">
+                                    <div className="flex overflow-x-auto no-scrollbar space-x-3 -mx-2 px-2">
                                         {event.venue.menuImages.map((img, i) => (
-                                            <img key={i} src={img} className="w-24 h-24 rounded-lg object-cover border border-white/10 flex-shrink-0" />
+                                            <img key={i} src={img} className="w-20 h-20 rounded-lg object-cover border border-white/10 flex-shrink-0" />
                                         ))}
-                                    </div>
-                                    
-                                    <div className="bg-slate-800/50 rounded-lg p-3">
-                                        <p className="text-[10px] text-slate-500 mb-1 font-bold uppercase tracking-wider">Recommended</p>
-                                        <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed">
-                                            {event.venue.menuText}
-                                        </p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Existing: Participants */}
                             <h3 className="text-sm font-bold mb-4 flex items-center text-slate-300">
                                 <span>参加メンバー</span>
                                 <span className="mx-2 text-slate-600">|</span>
-                                <span className="text-xs font-normal text-slate-400">タップして評価を確認</span>
+                                <span className="text-[10px] font-normal text-slate-400">{event.participantSummary}</span>
                             </h3>
                             
                             <div className="flex flex-wrap gap-4">
                                 {event.participants.map((user, i) => (
-                                    <button 
-                                        key={i} 
-                                        onClick={(e) => { e.stopPropagation(); onUserClick(user); }}
-                                        className="flex flex-col items-center group"
-                                    >
-                                        <div className="relative">
-                                            <img src={user.image} className="w-14 h-14 rounded-full border-2 border-slate-700 object-cover bg-white group-active:scale-95 transition-transform" />
-                                            <div className="absolute -bottom-1 -right-1 bg-night-900 rounded-full p-0.5">
-                                                <div className="w-5 h-5 rounded-full bg-yellow-500 text-black text-[9px] font-black flex items-center justify-center">
-                                                    {user.score}
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <div key={i} className="flex flex-col items-center">
+                                        <img src={user.image} className="w-12 h-12 rounded-full border-2 border-slate-700 object-cover bg-white" />
                                         <span className="text-[10px] mt-1.5 text-slate-400 font-medium">{user.name}</span>
-                                    </button>
+                                    </div>
                                 ))}
-                                <div className="w-14 h-14 rounded-full border-2 border-dashed border-slate-600 flex items-center justify-center flex-col text-slate-500 bg-slate-800/30">
-                                    <span className="text-[9px]">募集中</span>
-                                </div>
                             </div>
                         </div>
 
+                        {/* ★リクエスト箇所：下部の予約ボタン */}
                         <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-night-900 via-night-900 to-transparent pb-safe z-20">
-                            <button className="w-full bg-gradient-to-r from-neon-pink to-neon-purple text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-neon-pink/30 active:scale-95 transition-transform flex items-center justify-center cursor-pointer overflow-hidden relative">
-                                <span className="relative z-10">参加予約する</span>
-                                <span className="mx-2 opacity-50 relative z-10">|</span>
-                                <span className="relative z-10">{event.price}</span>
-                                <div className="absolute inset-0 bg-white/20 translate-y-full animate-[slideUp_2s_infinite]"></div>
-                            </button>
+                            {event.isHotPepper ? (
+                                // ホットペッパー公式風の赤いボタン
+                                <button className="w-full bg-gradient-to-r from-[#eb4d3d] to-[#d93a2b] text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-red-500/40 active:scale-95 transition-transform flex flex-col items-center justify-center cursor-pointer border border-red-400/50">
+                                    <span className="text-[10px] opacity-90 mb-0.5 flex items-center">
+                                        ホットペッパーグルメ経由で予約
+                                        <Icon name="external-link" size={10} className="ml-1" />
+                                    </span>
+                                    <span className="text-lg tracking-wide flex items-center">
+                                        即予約を確定する <span className="mx-2 opacity-50">|</span> {event.price}
+                                    </span>
+                                </button>
+                            ) : (
+                                // 通常のネオンピンクボタン
+                                <button className="w-full bg-gradient-to-r from-neon-pink to-neon-purple text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-neon-pink/30 active:scale-95 transition-transform flex items-center justify-center cursor-pointer">
+                                    <span>参加予約する</span>
+                                    <span className="mx-2 opacity-50">|</span>
+                                    <span>{event.price}</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -598,23 +476,9 @@
 
         // --- Main App ---
         const App = () => {
-            const [loading, setLoading] = useState(true);
             const [activeTab, setActiveTab] = useState('home');
+            const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
             const [selectedEvent, setSelectedEvent] = useState(null);
-            const [viewingUser, setViewingUser] = useState(null);
-
-            const [feedLoading, setFeedLoading] = useState(false);
-
-            useEffect(() => {
-                if (!loading && activeTab === 'home') {
-                    setFeedLoading(true);
-                    setTimeout(() => setFeedLoading(false), 800);
-                }
-            }, [loading, activeTab]);
-
-            if (loading) {
-                return <SplashScreen onFinish={() => setLoading(false)} />;
-            }
 
             const NavItem = ({ name, icon, label }) => {
                 const isActive = activeTab === name;
@@ -632,57 +496,112 @@
             };
 
             return (
-                <div className="relative min-h-screen pb-20">
+                <div className="relative h-screen flex flex-col overflow-hidden bg-night-900 pb-safe">
                     
                     {/* Header */}
                     {activeTab === 'home' && (
-                        <div className="sticky top-0 z-30 glass pb-4 pt-safe">
+                        <div className="z-30 glass flex-shrink-0">
                             <div className="flex items-center justify-between px-6 py-4">
                                 <h1 className="text-xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-neon-pink to-neon-purple">
                                     TOMO NOMI
                                 </h1>
-                                <div className="flex space-x-3">
-                                     <div className="p-2 bg-slate-800 rounded-full border border-white/10">
-                                        <Icon name="bell" size={18} className="text-slate-300" />
-                                    </div>
+                                
+                                {/* リスト / マップ 切り替えトグル */}
+                                <div className="flex bg-slate-800 rounded-full p-1 border border-white/10 shadow-inner">
+                                    <button 
+                                        onClick={() => setViewMode('list')}
+                                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${viewMode === 'list' ? 'bg-slate-600 text-white shadow' : 'text-slate-400'}`}
+                                    >
+                                        リスト
+                                    </button>
+                                    <button 
+                                        onClick={() => setViewMode('map')}
+                                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center ${viewMode === 'map' ? 'bg-slate-600 text-white shadow' : 'text-slate-400'}`}
+                                    >
+                                        <Icon name="map" size={12} className="mr-1" /> マップ
+                                    </button>
                                 </div>
                             </div>
                             
-                            <div className="flex overflow-x-auto no-scrollbar px-6 pb-2">
-                                {STORIES.map(story => (
-                                    <div key={story.id} className="flex flex-col items-center mr-4 cursor-pointer active:scale-95 transition-transform flex-shrink-0">
-                                        <div className={`w-[68px] h-[68px] rounded-full p-[2px] bg-gradient-to-tr ${story.color}`}>
-                                            <div className="w-full h-full rounded-full border-2 border-night-900 overflow-hidden">
-                                                <img src={story.img} alt={story.tag} className="w-full h-full object-cover" />
+                            {viewMode === 'list' && (
+                                <div className="flex overflow-x-auto no-scrollbar px-6 pb-2 transition-all">
+                                    {STORIES.map(story => (
+                                        <div key={story.id} className="flex flex-col items-center mr-4 cursor-pointer active:scale-95 flex-shrink-0">
+                                            <div className={`w-[60px] h-[60px] rounded-full p-[2px] bg-gradient-to-tr ${story.color}`}>
+                                                <div className="w-full h-full rounded-full border-2 border-night-900 overflow-hidden">
+                                                    <img src={story.img} className="w-full h-full object-cover" />
+                                                </div>
                                             </div>
+                                            <span className="mt-1 text-[9px] text-slate-300 font-medium truncate w-[60px] text-center">{story.tag}</span>
                                         </div>
-                                        <span className="mt-1 text-[10px] text-slate-300 font-medium truncate w-[70px] text-center">{story.tag}</span>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* Main Content */}
-                    <div className="px-6 pt-6">
+                    {/* Main Content Area */}
+                    <div className="flex-1 relative w-full h-full">
                         {activeTab === 'home' ? (
-                            feedLoading ? (
-                                <div className="animate-pulse space-y-6">
-                                    {[1,2].map(i => (
-                                        <div key={i} className="w-full aspect-[4/5] bg-slate-800 rounded-3xl"></div>
-                                    ))}
+                            viewMode === 'map' ? (
+                                // Map View
+                                <div className="absolute inset-0 z-0 bg-night-900">
+                                    <MapView events={EVENTS} onMarkerClick={setSelectedEvent} />
+                                    {/* マップ上部の影 */}
+                                    <div className="absolute top-0 left-0 w-full h-6 bg-gradient-to-b from-night-900 to-transparent z-10 pointer-events-none"></div>
                                 </div>
                             ) : (
-                                EVENTS.map(event => (
-                                    <EventCard 
-                                        key={event.id} 
-                                        event={event} 
-                                        onClick={setSelectedEvent} 
-                                    />
-                                ))
+                                // List View
+                                <div className="absolute inset-0 overflow-y-auto px-6 pt-4 pb-28">
+                                    {EVENTS.map(event => (
+                                        <div 
+                                            key={event.id}
+                                            onClick={() => setSelectedEvent(event)}
+                                            className="mb-6 relative w-full aspect-[4/5] sm:aspect-[16/9] rounded-3xl overflow-hidden active:scale-[0.98] transition-all duration-200 shadow-2xl shadow-neon-purple/10 cursor-pointer group"
+                                        >
+                                            <img src={event.image} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-night-900 via-night-900/40 to-transparent"></div>
+                                            
+                                            <div className="absolute top-4 left-4 flex flex-col gap-2">
+                                                <span className={`px-3 py-1 text-xs font-bold rounded-full backdrop-blur-md shadow-lg w-max text-white ${event.statusColor}`}>
+                                                    {event.status}
+                                                </span>
+                                            </div>
+
+                                            {/* ★リクエスト箇所：リスト画面のホットペッパーバッジ */}
+                                            {event.isHotPepper && (
+                                                <div className="absolute top-4 right-4 flex flex-col items-end gap-1">
+                                                    <span className="bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded shadow-lg flex items-center border border-red-500">
+                                                        🔥 即予約OK
+                                                    </span>
+                                                    <span className="bg-yellow-400 text-black text-[9px] font-black px-2 py-1 rounded shadow-lg flex items-center border border-yellow-500">
+                                                        🅿️ ポイント貯まる
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            <div className="absolute bottom-0 left-0 w-full p-5 pb-6">
+                                                <div className="flex items-center text-neon-pink text-xs font-bold mb-1 tracking-wider uppercase">
+                                                    <Icon name="map-pin" size={12} className="mr-1" />
+                                                    {event.location}
+                                                </div>
+                                                <h3 className="text-xl font-bold leading-tight mb-3 text-white">
+                                                    {event.title}
+                                                </h3>
+                                                <div className="flex items-center justify-between mt-3">
+                                                    <span className="text-xs text-slate-400">{event.time}</span>
+                                                    <div className="flex items-center space-x-2 bg-neon-purple/80 px-3 py-1.5 rounded-full backdrop-blur-sm shadow-lg shadow-neon-purple/20">
+                                                        <span className="text-sm font-bold text-white">{event.price}</span>
+                                                        <Icon name="chevron-right" size={14} className="text-white" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )
                         ) : (
-                            <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500">
+                            <div className="flex flex-col items-center justify-center h-full text-slate-500">
                                 <Icon name="lock" size={48} className="mb-4 opacity-50" />
                                 <p>この機能はMVP版では制限されています</p>
                             </div>
@@ -690,7 +609,7 @@
                     </div>
 
                     {/* Bottom Navigation */}
-                    <div className="fixed-center bottom-0 h-20 glass flex items-center justify-around pb-safe z-30 border-t border-slate-800">
+                    <div className="fixed-center bottom-0 h-20 glass flex items-center justify-around z-40 border-t border-slate-800">
                         <NavItem name="home" icon="home" label="ホーム" />
                         <NavItem name="search" icon="search" label="さがす" />
                         <div className="relative -top-6">
@@ -702,17 +621,8 @@
                         <NavItem name="host" icon="user" label="マイページ" />
                     </div>
 
-                    {/* Modals */}
-                    <BottomSheet 
-                        event={selectedEvent} 
-                        onClose={() => setSelectedEvent(null)}
-                        onUserClick={setViewingUser} 
-                    />
-                    
-                    <UserProfileModal 
-                        user={viewingUser} 
-                        onClose={() => setViewingUser(null)} 
-                    />
+                    {/* Details Modal */}
+                    <BottomSheet event={selectedEvent} onClose={() => setSelectedEvent(null)} />
                 </div>
             );
         };
@@ -722,3 +632,4 @@
     </script>
 </body>
 </html>
+
